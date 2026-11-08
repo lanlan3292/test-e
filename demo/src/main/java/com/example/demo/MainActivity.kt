@@ -9,6 +9,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.TextField
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -24,17 +27,24 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            val sliderState = rememberSliderState(.72f)
+            val sliderState = rememberSliderState(.50f)
             val interactionSource = remember { MutableInteractionSource() }
             val sliderValue = sliderState.value
+            var trackHeightText by remember { mutableStateOf("40") }
+            val trackHeight = trackHeightText.toIntOrNull()?.coerceIn(12, 100) ?: 40
             MaterialTheme {
                 Surface(Modifier.fillMaxSize()) {
                     Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
                         Text("${(sliderValue * 100).toInt()}%", style = MaterialTheme.typography.displaySmall)
+                        TextField(
+                            value = trackHeightText,
+                            onValueChange = { trackHeightText = it.filter(Char::isDigit) },
+                            label = { Text("Track height (dp)") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                        )
                         Text("Expressive Intensity Slider", style = MaterialTheme.typography.titleMedium)
-                        ExpressiveIntensitySlider(sliderValue, { sliderState.value = it })
-                        Text("Expressive Intensity Slider (24 dp)", style = MaterialTheme.typography.titleMedium)
-                        ExpressiveIntensitySlider(sliderValue, { sliderState.value = it }, trackHeight = 24.dp)
+                        ExpressiveIntensitySlider(sliderValue, { sliderState.value = it }, trackHeight = trackHeight.dp)
                         Text("Standard Slider", style = MaterialTheme.typography.titleMedium)
         Slider(
             state = sliderState,
@@ -47,7 +57,7 @@ class MainActivity : ComponentActivity() {
             track = {
                 SliderDefaults.Track(
                     sliderState = sliderState,
-                    modifier = Modifier.height(40.dp),
+                    modifier = Modifier.height(trackHeight.dp),
                     trackCornerSize = 12.dp,
                     drawStopIndicator = null,
                     thumbTrackGapSize = 6.dp,
