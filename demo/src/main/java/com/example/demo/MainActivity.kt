@@ -15,11 +15,9 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
-import androidx.compose.ui.unit.DpSize
 import androidx.compose.material3.Switch
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.VolumeUp
-import androidx.compose.material.icons.filled.VolumeOff
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.TextField
@@ -49,12 +47,11 @@ class MainActivity : ComponentActivity() {
                 key(sliderSteps) {
                     val sliderState = rememberSliderState(value = .50f, steps = sliderSteps)
                     val interactionSource = remember { MutableInteractionSource() }
-                    val startIcon = rememberVectorPainter(Icons.Filled.VolumeUp)
-                    val endIcon = rememberVectorPainter(Icons.Filled.VolumeOff)
+                    val insetIcon = rememberVectorPainter(Icons.Filled.Bolt)
                     val sliderValue = sliderState.value
                     Surface(Modifier.fillMaxSize()) {
                     Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
-                        Text("${(sliderValue * 100).toInt()}%", style = MaterialTheme.typography.displaySmall)
+                        Text("${(sliderValue)}", style = MaterialTheme.typography.displaySmall)
                         TextField(
                             value = trackHeightText,
                             onValueChange = { trackHeightText = it.filter(Char::isDigit) },
@@ -83,7 +80,7 @@ class MainActivity : ComponentActivity() {
                             { sliderState.value = it },
                             steps = sliderSteps,
                             trackHeight = trackHeight.dp,
-                            insetIcons = if (insetIconEnabled) startIcon to endIcon else null,
+                            insetIcon = if (insetIconEnabled) insetIcon else null,
                         )
                         Text("Standard Slider", style = MaterialTheme.typography.titleMedium)
                         Slider(
@@ -96,7 +93,7 @@ class MainActivity : ComponentActivity() {
             },
             track = { state ->
                 val colors = SliderDefaults.colors()
-                val iconSize = DpSize(20.dp, 20.dp)
+                val iconSize = 20.dp
                 val iconPadding = 10.dp
                 val thumbTrackGapSize = 6.dp
                 SliderDefaults.Track(
@@ -107,47 +104,36 @@ class MainActivity : ComponentActivity() {
                             if (insetIconEnabled) {
                                 Modifier.drawWithContent {
                                     drawContent()
-                                    val iconWidthPx = iconSize.width.toPx()
-                                    val iconHeightPx = iconSize.height.toPx()
+                                    val iconSizePx = iconSize.toPx()
                                     val paddingPx = iconPadding.toPx()
                                     val gapPx = thumbTrackGapSize.toPx()
-                                    val yOffset = size.height / 2f - iconHeightPx / 2f
-                                    val activeTrackEnd =
-                                        size.width * state.coercedValueAsFraction - gapPx
-                                    val inactiveTrackStart = activeTrackEnd + gapPx * 2f
-                                    val inactiveTrackEnd = size.width
-
-                                    fun drawIcon(painter: androidx.compose.ui.graphics.painter.Painter, x: Float, color: androidx.compose.ui.graphics.Color) {
-                                        translate(x, yOffset) {
-                                            with(painter) {
-                                                draw(
-                                                    androidx.compose.ui.geometry.Size(iconWidthPx, iconHeightPx),
-                                                    colorFilter = ColorFilter.tint(color)
-                                                )
-                                            }
+                                    val yOffset = size.height / 2f - iconSizePx / 2f
+                                    val thumbCenter = size.width * state.coercedValueAsFraction
+                                    val leftEnd = paddingPx + iconSizePx
+                                    val overlapsThumb =
+                                        leftEnd > thumbCenter - gapPx &&
+                                            paddingPx < thumbCenter + gapPx
+                                    val iconColor =
+                                        if (overlapsThumb) colors.inactiveTickColor
+                                        else colors.activeTickColor
+                                    val desiredX = if (overlapsThumb) {
+                                        thumbCenter + gapPx + paddingPx
+                                    } else {
+                                        paddingPx
+                                    }
+                                    val x = desiredX.coerceAtMost(
+                                        (size.width - iconSizePx - paddingPx).coerceAtLeast(paddingPx)
+                                    )
+                                    translate(x, yOffset) {
+                                        with(insetIcon) {
+                                            draw(
+                                                androidx.compose.ui.geometry.Size(
+                                                    iconSizePx,
+                                                    iconSizePx
+                                                ),
+                                                colorFilter = ColorFilter.tint(iconColor)
+                                            )
                                         }
-                                    }
-
-                                    if (iconWidthPx < activeTrackEnd - paddingPx * 2f) {
-                                        drawIcon(startIcon, paddingPx, colors.activeTickColor)
-                                        drawIcon(
-                                            endIcon,
-                                            activeTrackEnd - paddingPx - iconWidthPx,
-                                            colors.activeTickColor
-                                        )
-                                    }
-                                    val inactiveWidth = inactiveTrackEnd - inactiveTrackStart
-                                    if (iconWidthPx < inactiveWidth - paddingPx * 2f) {
-                                        drawIcon(
-                                            startIcon,
-                                            inactiveTrackStart + paddingPx,
-                                            colors.inactiveTickColor
-                                        )
-                                        drawIcon(
-                                            endIcon,
-                                            inactiveTrackEnd - paddingPx - iconWidthPx,
-                                            colors.inactiveTickColor
-                                        )
                                     }
                                 }
                             } else {

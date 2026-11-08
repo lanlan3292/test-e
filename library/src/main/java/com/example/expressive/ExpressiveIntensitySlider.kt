@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -83,7 +84,7 @@ fun ExpressiveIntensitySlider(
     onValueChangeFinished: (() -> Unit)? = null,
     trackHeight: Dp = 40.dp,
     trackCornerSize: Dp = 12.dp,
-    insetIcons: Pair<Painter, Painter>? = null
+    insetIcon: Painter? = null
 ) {
     val state = rememberSliderState(value, steps, valueRange)
     val interactionSource = androidx.compose.runtime.remember { MutableInteractionSource() }
@@ -111,7 +112,7 @@ fun ExpressiveIntensitySlider(
                 colors = trackColors,
                 trackHeight = trackHeight,
                 trackCornerSize = trackCornerSize,
-                insetIcons = insetIcons
+                insetIcon = insetIcon
             )
         }
     )
@@ -124,10 +125,10 @@ private fun ExpressiveTrack(
     colors: androidx.compose.material3.SliderColors,
     trackHeight: Dp,
     trackCornerSize: Dp,
-    insetIcons: Pair<Painter, Painter>?
+    insetIcon: Painter?
 ) {
-    val startIcon = insetIcons?.first
-    val endIcon = insetIcons?.second
+    val insetIconSize = 20.dp
+    val insetIconPadding = 10.dp
     val iconSize = DpSize(20.dp, 20.dp)
     val iconPadding = 10.dp
     val thumbTrackGapSize = ThumbTrackGapSize
@@ -295,81 +296,38 @@ private fun ExpressiveTrack(
             thumbTrackGapSize = ThumbTrackGapSize
         )
 
-        if (enabled && startIcon != null && endIcon != null) {
+        if (enabled && insetIcon != null) {
             Canvas(
                 Modifier
                     .fillMaxWidth()
                     .height(trackHeight)
             ) {
-                val iconSizePx = iconSize.width.toPx()
-                val iconHeightPx = iconSize.height.toPx()
-                val yOffset = size.height / 2f - iconHeightPx / 2f
+                val iconSizePx = insetIconSize.toPx()
+                val yOffset = size.height / 2f - iconSizePx / 2f
                 val isRtl = layoutDirection == LayoutDirection.Rtl
-                val valueFraction = sliderState.coercedValueAsFraction
-                val activeTrackEnd =
-                    size.width * (if (isRtl) 1f - valueFraction else valueFraction) -
-                        thumbTrackGapSize.toPx()
-                val inactiveTrackStart = activeTrackEnd + thumbTrackGapSize.toPx() * 2f
-                val activeTrackWidth = activeTrackEnd
-                val inactiveTrackWidth = size.width - inactiveTrackStart
-                val paddingPx = iconPadding.toPx()
+                val thumbCenter = size.width * sliderState.coercedValueAsFraction
+                val paddingPx = insetIconPadding.toPx()
+                val gapPx = thumbTrackGapSize.toPx()
+                val left = paddingPx
+                val leftEnd = left + iconSizePx
+                val overlapsThumb = leftEnd > thumbCenter - gapPx && left < thumbCenter + gapPx
+                val x = if (overlapsThumb) thumbCenter + gapPx + paddingPx else left
+                val boundedX = x.coerceAtMost(
+                    (size.width - iconSizePx - paddingPx).coerceAtLeast(paddingPx)
+                )
+                val drawX = if (isRtl) size.width - boundedX - iconSizePx else boundedX
+                val iconColor =
+                    if (overlapsThumb) colors.inactiveTickColor else colors.activeTickColor
 
-                if (iconSizePx < activeTrackWidth - paddingPx * 2f) {
-                    drawInsetIcon(
-                        if (isRtl) endIcon else startIcon,
-                        Offset(if (isRtl) size.width else 0f, yOffset),
-                        paddingPx,
-                        iconSizePx,
-                        Color.White,
-                        fromEnd = isRtl
-                    )
-                    drawInsetIcon(
-                        if (isRtl) startIcon else endIcon,
-                        Offset(activeTrackEnd, yOffset),
-                        paddingPx,
-                        iconSizePx,
-                        Color.White,
-                        fromEnd = !isRtl
-                    )
-                }
-                if (iconSizePx < inactiveTrackWidth - paddingPx * 2f) {
-                    drawInsetIcon(
-                        if (isRtl) endIcon else startIcon,
-                        Offset(if (isRtl) size.width else inactiveTrackStart, yOffset),
-                        paddingPx,
-                        iconSizePx,
-                        colors.inactiveTickColor,
-                        fromEnd = isRtl
-                    )
-                    drawInsetIcon(
-                        if (isRtl) startIcon else endIcon,
-                        Offset(if (isRtl) inactiveTrackStart else size.width, yOffset),
-                        paddingPx,
-                        iconSizePx,
-                        colors.inactiveTickColor,
-                        fromEnd = !isRtl
-                    )
+                translate(drawX, yOffset) {
+                    with(insetIcon) {
+                        draw(
+                            size = Size(iconSizePx, iconSizePx),
+                            colorFilter = ColorFilter.tint(iconColor)
+                        )
+                    }
                 }
             }
-        }
-    }
-}
-
-private fun DrawScope.drawInsetIcon(
-    painter: Painter,
-    offset: Offset,
-    padding: Float,
-    iconSize: Float,
-    color: Color,
-    fromEnd: Boolean = false
-) {
-    val x = if (fromEnd) offset.x - padding - iconSize else offset.x + padding
-    translate(x, offset.y) {
-        with(painter) {
-            draw(
-                size = Size(iconSize, iconSize),
-                colorFilter = ColorFilter.tint(color)
-            )
         }
     }
 }
