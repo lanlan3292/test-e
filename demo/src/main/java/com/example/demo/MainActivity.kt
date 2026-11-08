@@ -27,13 +27,17 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            val sliderState = rememberSliderState(.50f)
-            val interactionSource = remember { MutableInteractionSource() }
-            val sliderValue = sliderState.value
             var trackHeightText by remember { mutableStateOf("40") }
+            var segmentCountText by remember { mutableStateOf("0") }
             val trackHeight = trackHeightText.toIntOrNull()?.coerceIn(12, 100) ?: 40
+            val segmentCount = segmentCountText.toIntOrNull()?.coerceAtLeast(0) ?: 0
+            val sliderSteps = if (segmentCount > 0) (segmentCount - 1).coerceAtLeast(0) else 0
             MaterialTheme {
-                Surface(Modifier.fillMaxSize()) {
+                key(sliderSteps) {
+                    val sliderState = rememberSliderState(value = .50f, steps = sliderSteps)
+                    val interactionSource = remember { MutableInteractionSource() }
+                    val sliderValue = sliderState.value
+                    Surface(Modifier.fillMaxSize()) {
                     Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
                         Text("${(sliderValue * 100).toInt()}%", style = MaterialTheme.typography.displaySmall)
                         TextField(
@@ -43,10 +47,22 @@ class MainActivity : ComponentActivity() {
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             singleLine = true,
                         )
+                        TextField(
+                            value = segmentCountText,
+                            onValueChange = { segmentCountText = it.filter(Char::isDigit) },
+                            label = { Text("Segments") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                        )
                         Text("Expressive Intensity Slider", style = MaterialTheme.typography.titleMedium)
-                        ExpressiveIntensitySlider(sliderValue, { sliderState.value = it }, trackHeight = trackHeight.dp)
+                        ExpressiveIntensitySlider(
+                            sliderValue,
+                            { sliderState.value = it },
+                            steps = sliderSteps,
+                            trackHeight = trackHeight.dp,
+                        )
                         Text("Standard Slider", style = MaterialTheme.typography.titleMedium)
-        Slider(
+                        Slider(
             state = sliderState,
             onValueChange = { sliderState.value = it },
             interactionSource = interactionSource,
@@ -63,10 +79,12 @@ class MainActivity : ComponentActivity() {
                     thumbTrackGapSize = 6.dp,
                 )
             },
-        )
+                        )
                     }
                 }
             }
         }
     }
 }
+}
+
