@@ -44,10 +44,12 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             var trackHeightText by remember { mutableStateOf("40") }
+            var particleCountText by remember { mutableStateOf("22") }
             var segmentCountText by remember { mutableStateOf("0") }
             var insetIconStyle by remember { mutableIntStateOf(0) }
             var iconMenuExpanded by remember { mutableStateOf(false) }
             val trackHeight = trackHeightText.toIntOrNull()?.coerceIn(12, 100) ?: 40
+            val particleCount = particleCountText.toIntOrNull()?.coerceIn(0, 100) ?: 22
             val segmentCount = segmentCountText.toIntOrNull()?.coerceAtLeast(0) ?: 0
             val sliderSteps = if (segmentCount > 0) (segmentCount - 1).coerceAtLeast(0) else 0
             MaterialTheme {
@@ -67,6 +69,13 @@ class MainActivity : ComponentActivity() {
                             value = trackHeightText,
                             onValueChange = { trackHeightText = it.filter(Char::isDigit) },
                             label = { Text("Track height (dp)") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                        )
+                        TextField(
+                            value = particleCountText,
+                            onValueChange = { particleCountText = it.filter(Char::isDigit) },
+                            label = { Text("Particle count (0-100)") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             singleLine = true,
                         )
@@ -120,6 +129,7 @@ class MainActivity : ComponentActivity() {
                             { sliderState.value = it },
                             steps = sliderSteps,
                             trackHeight = trackHeight.dp,
+                            particleCount = particleCount,
                             insetIcon = if (showInsetIcon && !officialInsetIcons) boltIcon else if (officialInsetIcons) musicIcon else null,
                             insetEndIcon = if (officialInsetIcons) musicOffIcon else null,
                         )

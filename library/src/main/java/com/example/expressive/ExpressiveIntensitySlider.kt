@@ -40,7 +40,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import kotlin.math.abs
+import kotlin.math.ceil
 import kotlin.math.min
 import kotlin.math.roundToInt
 
@@ -49,12 +49,11 @@ private val ThumbWidth = 4.dp
 private val ThumbTrackGapSize = 6.dp
 private const val EnergyStartFraction = 1f / 3f
 private const val EnergyEndFraction = 2f / 3f
-private const val ParticleCount = 22
+private const val DefaultParticleCount = 22
 private const val GoldenRatio = 0.6180339887498949f
 private const val ParticleDurationMeanMillis = 1500f
 private const val ParticleDurationSpread = 0.08f
 private const val ParticleMinimumBrightness = 0.5f
-private const val ParticleMinimumHeightSlotDistance = 3
 
 private data class SliderParticle(
     val phase: Float,
@@ -66,10 +65,9 @@ private data class SliderParticle(
 
 private data class AnimatedParticle(
     val particle: SliderParticle,
-    val progress: Float
+    val progress: Float,
+    val visibility: Float
 )
-
-private val SliderParticles = buildSliderParticles()
 
 /** Material 3 Slider with a blue-to-violet track and high-intensity particles. */
 @Composable
@@ -85,8 +83,10 @@ fun ExpressiveIntensitySlider(
     trackHeight: Dp = 40.dp,
     trackCornerSize: Dp = 12.dp,
     insetIcon: Painter? = null,
-    insetEndIcon: Painter? = null
+    insetEndIcon: Painter? = null,
+    particleCount: Int = DefaultParticleCount
 ) {
+    require(particleCount >= 0) { "particleCount must be non-negative" }
     val state = rememberSliderState(value, steps, valueRange)
     val interactionSource = androidx.compose.runtime.remember { MutableInteractionSource() }
     state.value = value
@@ -114,7 +114,8 @@ fun ExpressiveIntensitySlider(
                 trackHeight = trackHeight,
                 trackCornerSize = trackCornerSize,
                 insetIcon = insetIcon,
-                insetEndIcon = insetEndIcon
+                insetEndIcon = insetEndIcon,
+                maxParticleCount = particleCount
             )
         }
     )
@@ -128,7 +129,8 @@ private fun ExpressiveTrack(
     trackHeight: Dp,
     trackCornerSize: Dp,
     insetIcon: Painter?,
-    insetEndIcon: Painter?
+    insetEndIcon: Painter?,
+    maxParticleCount: Int
 ) {
     val insetIconSize = 20.dp
     val insetIconPadding = 10.dp
@@ -138,12 +140,17 @@ private fun ExpressiveTrack(
     val fraction = sliderState.coercedValueAsFraction
     val energy =
         ((fraction - EnergyStartFraction) / (1f - EnergyStartFraction)).coerceIn(0f, 1f)
-    val particleCount = (ParticleCount * energy).roundToInt()
+    val particleLevel = maxParticleCount * energy
+    val visibleParticleCount =
+        if (particleLevel > 0f) ceil(particleLevel).toInt().coerceAtMost(maxParticleCount) else 0
     val particleSpeed = (3f * fraction - 1f).coerceIn(0.35f, 2f)
+    val sliderParticles = remember(maxParticleCount) {
+        buildSliderParticles(maxParticleCount)
+    }
     val particles = buildList {
-        repeat(if (enabled) particleCount else 0) { index ->
+        repeat(if (enabled) visibleParticleCount else 0) { index ->
             key(index) {
-                val particle = SliderParticles[index]
+                val particle = sliderParticles[index]
                 val durationMillis =
                     (ParticleDurationMeanMillis * 2f /
                         particleSpeed * particle.durationSpread).roundToInt()
@@ -160,7 +167,13 @@ private fun ExpressiveTrack(
                     ),
                     label = "expressiveSliderParticlePhase$index"
                 )
-                add(AnimatedParticle(particle, phase))
+                add(
+                    AnimatedParticle(
+                        particle = particle,
+                        progress = phase,
+                        visibility = (particleLevel - index).coerceIn(0f, 1f)
+                    )
+                )
             }
         }
     }
@@ -264,7 +277,8 @@ private fun ExpressiveTrack(
                                 val alpha =
                                     min(fadeIn, fadeOut) *
                                         particle.brightness *
-                                        (0.6f + 0.4f * energy)
+                                        (0.6f + 0.4f * energy) *
+                                        animatedParticle.visibility
                                 val center =
                                     Offset(x, particle.yFraction * size.height)
                                 val radius = 1.5.dp.toPx() * particle.brightness
@@ -392,35 +406,15 @@ private fun lerpColor(start: Color, end: Color, fraction: Float): Color =
         alpha = start.alpha + (end.alpha - start.alpha) * fraction
     )
 
-private fun buildSliderParticles(): List<SliderParticle> {
-    val phases = List(ParticleCount) { index -> (index + 1) * GoldenRatio % 1f }
-    val phaseOrder = phases.indices.sortedBy { phases[it] }
-    var slots: List<Int>? = null
+private fun buildSliderParticles(count: Int): List<SliderParticle> {
+    if (count == 0) return emptyList()
 
-    for (salt in 71 until 4000) {
-        val candidate = (0 until ParticleCount)
-            .sortedWith(compareBy<Int> { particleHash(it, salt) }.thenBy { it })
-        if (
-            (1 until ParticleCount).all { index ->
-                abs(candidate[index] - candidate[index - 1]) >=
-                    ParticleMinimumHeightSlotDistance
-            }
-        ) {
-            slots = candidate
-            break
-        }
-    }
+    val phases = List(count) { index -> (index + 1) * GoldenRatio % 1f }
 
-    val heightSlots = slots ?: (0 until ParticleCount).map { it * 5 % ParticleCount }
-    val phaseRanks = IntArray(ParticleCount)
-    phaseOrder.forEachIndexed { rank, index -> phaseRanks[index] = rank }
-
-    return List(ParticleCount) { index ->
-        val phase = phases[index]
-        val rank = phaseRanks[index]
+    return List(count) { index ->
         SliderParticle(
-            phase = phase,
-            yFraction = 0.08f + heightSlots[rank] / (ParticleCount - 1f) * 0.84f,
+            phase = phases[index],
+            yFraction = 0.08f + vanDerCorput(index) * 0.84f,
             brightness =
                 ParticleMinimumBrightness +
                     (1f - ParticleMinimumBrightness) * particleHash(index, 61),
@@ -430,6 +424,20 @@ private fun buildSliderParticles(): List<SliderParticle> {
             phaseJitter = particleHash(index, 53) * 0.03f
         )
     }
+}
+
+private fun vanDerCorput(index: Int): Float {
+    var bits = index + 1
+    var reversed = 0f
+    var scale = 0.5f
+
+    while (bits > 0) {
+        if (bits and 1 == 1) reversed += scale
+        bits = bits ushr 1
+        scale *= 0.5f
+    }
+
+    return reversed
 }
 
 private fun particleHash(index: Int, salt: Int): Float {
