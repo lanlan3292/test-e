@@ -159,7 +159,12 @@ class MainActivity : ComponentActivity() {
                                     val paddingPx = iconPadding.toPx()
                                     val gapPx = thumbTrackGapSize.toPx()
                                     val yOffset = size.height / 2f - iconSizePx / 2f
-                                    val thumbCenter = size.width * state.coercedValueAsFraction
+                                    val thumbWidthPx = 4.dp.toPx()
+                                    val thumbCenter =
+                                        thumbWidthPx / 2f +
+                                            (size.width - thumbWidthPx) * state.coercedValueAsFraction
+                                    val thumbLeft = thumbCenter - thumbWidthPx / 2f
+                                    val thumbRight = thumbCenter + thumbWidthPx / 2f
                                     fun drawIcon(painter: androidx.compose.ui.graphics.painter.Painter, x: Float, color: androidx.compose.ui.graphics.Color) {
                                         translate(x, yOffset) {
                                             with(painter) {
@@ -172,8 +177,8 @@ class MainActivity : ComponentActivity() {
                                     }
 
                                     if (officialInsetIcons) {
-                                        val activeEnd = thumbCenter - gapPx
-                                        val inactiveStart = thumbCenter + gapPx
+                                        val activeEnd = thumbLeft - gapPx
+                                        val inactiveStart = thumbRight + gapPx
                                         if (iconSizePx < activeEnd - paddingPx * 2f) {
                                             drawIcon(musicIcon, paddingPx, colors.activeTickColor)
                                             drawIcon(musicOffIcon, activeEnd - paddingPx - iconSizePx, colors.activeTickColor)
@@ -184,13 +189,13 @@ class MainActivity : ComponentActivity() {
                                         }
                                     } else {
                                         val overlapsThumb =
-                                            paddingPx + iconSizePx > thumbCenter - gapPx &&
-                                                paddingPx < thumbCenter + gapPx
+                                            paddingPx + iconSizePx > thumbLeft - gapPx &&
+                                                paddingPx <= thumbRight + gapPx
                                         val iconColor =
                                             if (overlapsThumb) colors.inactiveTickColor
                                             else colors.activeTickColor
                                         val desiredX =
-                                            if (overlapsThumb) thumbCenter + gapPx + paddingPx
+                                            if (overlapsThumb) thumbRight + gapPx + paddingPx
                                             else paddingPx
                                         val x = desiredX.coerceAtMost(
                                             (size.width - iconSizePx - paddingPx).coerceAtLeast(paddingPx)
