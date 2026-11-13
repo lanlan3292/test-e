@@ -1,4 +1,4 @@
-package com.example.expressive
+package com.lanlan3292.material3.extension
 
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat

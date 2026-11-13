@@ -1,4 +1,4 @@
-package com.example.expressive.demo
+package com.lanlan3292.material3.extension.demo
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -37,7 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.expressive.ExpressiveIntensitySlider
+import com.lanlan3292.material3.extension.ExpressiveIntensitySlider
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

@@ -4,9 +4,9 @@ plugins {
 }
 
 android {
-    namespace = "com.example.expressive.demo"
+    namespace = "com.lanlan3292.material3.extension.demo"
     compileSdk = 37
-    defaultConfig { applicationId = "com.example.expressive.demo"; minSdk = 26; targetSdk = 35; versionCode = 1; versionName = "0.1.0" }
+    defaultConfig { applicationId = "com.lanlan3292.material3.extension.demo"; minSdk = 26; targetSdk = 35; versionCode = 1; versionName = "0.1.0" }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     buildFeatures { compose = true }
 }
