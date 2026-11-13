@@ -51,7 +51,7 @@ private const val EnergyStartFraction = 1f / 3f
 private const val EnergyEndFraction = 2f / 3f
 private const val DefaultParticleCount = 22
 private const val GoldenRatio = 0.6180339887498949f
-private const val ParticleDurationMeanMillis = 1500f
+private const val ParticleDurationMeanMillis = 6000f
 private const val ParticleDurationSpread = 0.08f
 private const val ParticleMinimumBrightness = 0.5f
 
@@ -216,8 +216,7 @@ private fun ExpressiveTrack(
             key(index) {
                 val particle = sliderParticles[index]
                 val durationMillis =
-                    (ParticleDurationMeanMillis * 2f /
-                        particleSpeed * particle.durationSpread).roundToInt()
+                    (ParticleDurationMeanMillis / 2f * particle.durationSpread).roundToInt()
                 val transition =
                     rememberInfiniteTransition(label = "expressiveSliderParticle$index")
                 val phase by transition.animateFloat(
@@ -327,8 +326,11 @@ private fun ExpressiveTrack(
                         particles.forEach { animatedParticle ->
                             val particle = animatedParticle.particle
                             val progress =
-                                (animatedParticle.progress + particle.phase + particle.phaseJitter) %
-                                    1f
+                                (
+                                    animatedParticle.progress * particleSpeed +
+                                        particle.phase +
+                                        particle.phaseJitter
+                                    ) % 1f
                             val x =
                                 if (isRtl) {
                                     size.width * progress
